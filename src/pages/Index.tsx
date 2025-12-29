@@ -114,7 +114,7 @@ const Index = () => {
                 </Link>
               </Button>
               <Button variant="hero-outline" size="xl" asChild>
-                <Link to="/events">Explore Events</Link>
+                <Link to="/dashboard/events">Explore Events</Link>
               </Button>
             </div>
           </div>
@@ -160,7 +160,7 @@ const Index = () => {
               </p>
             </div>
             <Button variant="outline" asChild className="hidden md:inline-flex">
-              <Link to="/events">
+              <Link to="/dashboard/events">
                 View All Events
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -181,7 +181,7 @@ const Index = () => {
           
           <div className="mt-8 text-center md:hidden">
             <Button variant="outline" asChild>
-              <Link to="/events">
+              <Link to="/dashboard/events">
                 View All Events
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -203,7 +203,7 @@ const Index = () => {
               </p>
             </div>
             <Button variant="outline" asChild className="hidden md:inline-flex">
-              <Link to="/posts">
+              <Link to="/dashboard/posts">
                 View All Posts
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -224,7 +224,7 @@ const Index = () => {
           
           <div className="mt-8 text-center md:hidden">
             <Button variant="outline" asChild>
-              <Link to="/posts">
+              <Link to="/dashboard/posts">
                 View All Posts
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

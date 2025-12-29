@@ -23,13 +23,13 @@ const Navbar = () => {
             <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
               Home
             </Link>
-            <Link to="/events" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/dashboard/events" className="text-muted-foreground hover:text-foreground transition-colors">
               Events
             </Link>
-            <Link to="/posts" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/dashboard/posts" className="text-muted-foreground hover:text-foreground transition-colors">
               Posts
             </Link>
-            <Link to="/members" className="text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/dashboard/members" className="text-muted-foreground hover:text-foreground transition-colors">
               Members
             </Link>
           </div>
@@ -65,21 +65,21 @@ const Navbar = () => {
                 Home
               </Link>
               <Link 
-                to="/events" 
+                to="/dashboard/events" 
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Events
               </Link>
               <Link 
-                to="/posts" 
+                to="/dashboard/posts" 
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Posts
               </Link>
               <Link 
-                to="/members" 
+                to="/dashboard/members" 
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >

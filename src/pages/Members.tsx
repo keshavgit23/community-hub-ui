@@ -1,68 +1,71 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Loader2 } from "lucide-react";
 import MemberCard from "@/components/cards/MemberCard";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
-const members = [
-  {
-    id: "1",
-    name: "Sarah Chen",
-    role: "Admin" as const,
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
-    bio: "Community lead and platform architect. Passionate about building inclusive spaces.",
-  },
-  {
-    id: "2",
-    name: "Marcus Johnson",
-    role: "Moderator" as const,
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    bio: "Developer advocate and content creator. Love helping newcomers.",
-  },
-  {
-    id: "3",
-    name: "Alex Rivera",
-    role: "Member" as const,
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face",
-    bio: "Full-stack developer interested in community tools.",
-  },
-  {
-    id: "4",
-    name: "Emma Watson",
-    role: "Member" as const,
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
-    bio: "UX designer focused on user experience and accessibility.",
-  },
-  {
-    id: "5",
-    name: "James Wilson",
-    role: "Member" as const,
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
-    bio: "Product manager with a passion for community-driven development.",
-  },
-  {
-    id: "6",
-    name: "Lisa Park",
-    role: "Moderator" as const,
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face",
-    bio: "Content strategist and community engagement specialist.",
-  },
-  {
-    id: "7",
-    name: "David Kim",
-    role: "Member" as const,
-    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face",
-    bio: "Backend engineer working on scalable infrastructure.",
-  },
-  {
-    id: "8",
-    name: "Nina Patel",
-    role: "Member" as const,
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop&crop=face",
-    bio: "Data scientist exploring community analytics.",
-  },
-];
+interface Profile {
+  id: string;
+  name: string | null;
+  role: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+}
 
 const Members = () => {
+  const [members, setMembers] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
+
+  const fetchMembers = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching members:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load members. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setMembers(data || []);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMembers();
+  }, []);
+
+  const getRoleType = (role: string | null): "Admin" | "Member" | "Moderator" => {
+    const normalizedRole = role?.toLowerCase();
+    if (normalizedRole === "admin") return "Admin";
+    if (normalizedRole === "moderator") return "Moderator";
+    return "Member";
+  };
+
+  const filteredMembers = members.filter((member) =>
+    member.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -80,6 +83,8 @@ const Members = () => {
           <Input
             placeholder="Search members..."
             className="pl-10 h-11"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         <Button variant="outline">
@@ -89,11 +94,30 @@ const Members = () => {
       </div>
 
       {/* Members Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {members.map((member) => (
-          <MemberCard key={member.id} {...member} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : filteredMembers.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">
+            {searchQuery ? "No members found matching your search." : "No members yet."}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredMembers.map((member) => (
+            <MemberCard
+              key={member.id}
+              id={member.id}
+              name={member.name || "Anonymous"}
+              role={getRoleType(member.role)}
+              avatar={member.avatar_url || undefined}
+              bio={member.bio || undefined}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

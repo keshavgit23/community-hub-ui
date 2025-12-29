@@ -1,60 +1,76 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Plus, Filter } from "lucide-react";
+import { Plus, Filter, Loader2 } from "lucide-react";
 import EventCard from "@/components/cards/EventCard";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
-const events = [
-  {
-    title: "Community Kickoff 2024",
-    date: "January 15, 2024",
-    location: "Virtual Event",
-    description: "Join us for our annual community kickoff where we'll share our roadmap and goals for the year.",
-    attendees: 45,
-    maxAttendees: 100,
-  },
-  {
-    title: "Developer Workshop",
-    date: "January 22, 2024",
-    location: "San Francisco, CA",
-    description: "Hands-on workshop covering best practices for building scalable community platforms.",
-    attendees: 28,
-    maxAttendees: 30,
-  },
-  {
-    title: "Monthly AMA Session",
-    date: "January 30, 2024",
-    location: "Discord",
-    description: "Open Q&A session with our team. Bring your questions and feedback!",
-    attendees: 67,
-    maxAttendees: 200,
-  },
-  {
-    title: "Design Systems Workshop",
-    date: "February 5, 2024",
-    location: "Virtual Event",
-    description: "Learn how to build and maintain a design system for your community platform.",
-    attendees: 12,
-    maxAttendees: 50,
-  },
-  {
-    title: "Community Leaders Meetup",
-    date: "February 15, 2024",
-    location: "New York, NY",
-    description: "Connect with other community leaders and share experiences, challenges, and wins.",
-    attendees: 18,
-    maxAttendees: 25,
-  },
-  {
-    title: "Winter Hackathon",
-    date: "February 20-22, 2024",
-    location: "Virtual Event",
-    description: "48-hour hackathon to build innovative community tools. Prizes for winners!",
-    attendees: 89,
-    maxAttendees: 150,
-  },
-];
+interface Event {
+  id: string;
+  title: string;
+  description: string | null;
+  date: string | null;
+  location: string | null;
+  max_participants: number | null;
+  created_at: string;
+}
 
 const Events = () => {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .order("date", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching events:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load events. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setEvents(data || []);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const formatEventDate = (dateString: string | null) => {
+    if (!dateString) return "TBD";
+    try {
+      return format(new Date(dateString), "MMMM d, yyyy");
+    } catch {
+      return "TBD";
+    }
+  };
+
+  const isEventPast = (dateString: string | null) => {
+    if (!dateString) return false;
+    return new Date(dateString) < new Date();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -78,11 +94,36 @@ const Events = () => {
       </div>
 
       {/* Events Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map((event) => (
-          <EventCard key={event.title} {...event} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : events.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">No events yet. Create the first one!</p>
+          <Button asChild>
+            <Link to="/dashboard/events/create">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Event
+            </Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {events.map((event) => (
+            <EventCard
+              key={event.id}
+              title={event.title}
+              description={event.description || "No description provided."}
+              date={formatEventDate(event.date)}
+              location={event.location || "Location TBD"}
+              maxAttendees={event.max_participants || undefined}
+              attendees={0}
+              isPast={isEventPast(event.date)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
