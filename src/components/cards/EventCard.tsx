@@ -1,10 +1,11 @@
 import { forwardRef } from "react";
-import { Calendar, MapPin, Users } from "lucide-react";
+import { Calendar, MapPin, Users, Check } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 interface EventCardProps {
+  id?: string;
   title: string;
   date: string;
   location: string;
@@ -12,17 +13,42 @@ interface EventCardProps {
   attendees?: number;
   maxAttendees?: number;
   isPast?: boolean;
+  isJoined?: boolean;
+  onJoinClick?: () => void;
+  isAuthenticated?: boolean;
 }
 
 const EventCard = forwardRef<HTMLDivElement, EventCardProps>(
-  ({ title, date, location, description, attendees = 0, maxAttendees, isPast = false }, ref) => {
+  ({ 
+    title, 
+    date, 
+    location, 
+    description, 
+    attendees = 0, 
+    maxAttendees, 
+    isPast = false,
+    isJoined = false,
+    onJoinClick,
+    isAuthenticated = false,
+  }, ref) => {
+    const getButtonContent = () => {
+      if (isPast) return "Event Ended";
+      if (isJoined) return (
+        <>
+          <Check className="mr-2 h-4 w-4" />
+          Already Joined
+        </>
+      );
+      return "Join Event";
+    };
+
     return (
       <Card ref={ref} className="overflow-hidden group">
         <div className="h-2 gradient-primary" />
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
-            <Badge variant={isPast ? "secondary" : "default"}>
-              {isPast ? "Past Event" : "Upcoming"}
+            <Badge variant={isPast ? "secondary" : isJoined ? "outline" : "default"}>
+              {isPast ? "Past Event" : isJoined ? "Joined" : "Upcoming"}
             </Badge>
             {maxAttendees && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -49,8 +75,13 @@ const EventCard = forwardRef<HTMLDivElement, EventCardProps>(
           </div>
         </CardContent>
         <CardFooter className="px-6 pb-6">
-          <Button className="w-full" disabled={isPast}>
-            {isPast ? "Event Ended" : "Join Event"}
+          <Button 
+            className="w-full" 
+            disabled={isPast || isJoined}
+            variant={isJoined ? "secondary" : "default"}
+            onClick={onJoinClick}
+          >
+            {getButtonContent()}
           </Button>
         </CardFooter>
       </Card>

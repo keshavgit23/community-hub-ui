@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_registrations: {
+        Row: {
+          address: string | null
+          age: number | null
+          created_at: string
+          email: string
+          event_id: string
+          id: string
+          mobile: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          age?: number | null
+          created_at?: string
+          email: string
+          event_id: string
+          id?: string
+          mobile?: string | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          age?: number | null
+          created_at?: string
+          email?: string
+          event_id?: string
+          id?: string
+          mobile?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string

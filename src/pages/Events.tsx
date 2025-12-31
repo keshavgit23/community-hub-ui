@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, Filter, Loader2 } from "lucide-react";
 import EventCard from "@/components/cards/EventCard";
+import JoinEventModal from "@/components/JoinEventModal";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 
 interface Event {
@@ -20,7 +22,12 @@ interface Event {
 const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [joinedEventIds, setJoinedEventIds] = useState<Set<string>>(new Set());
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const fetchEvents = async () => {
     try {
@@ -53,9 +60,37 @@ const Events = () => {
     }
   };
 
+  const fetchUserRegistrations = async () => {
+    if (!user) {
+      setJoinedEventIds(new Set());
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("event_registrations")
+        .select("event_id")
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Error fetching registrations:", error);
+        return;
+      }
+
+      const ids = new Set(data?.map((r) => r.event_id) || []);
+      setJoinedEventIds(ids);
+    } catch (err) {
+      console.error("Unexpected error fetching registrations:", err);
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  useEffect(() => {
+    fetchUserRegistrations();
+  }, [user]);
 
   const formatEventDate = (dateString: string | null) => {
     if (!dateString) return "TBD";
@@ -69,6 +104,24 @@ const Events = () => {
   const isEventPast = (dateString: string | null) => {
     if (!dateString) return false;
     return new Date(dateString) < new Date();
+  };
+
+  const handleJoinClick = (event: Event) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to join events.",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+    setSelectedEvent(event);
+    setIsModalOpen(true);
+  };
+
+  const handleJoinSuccess = () => {
+    fetchUserRegistrations();
   };
 
   return (
@@ -113,6 +166,7 @@ const Events = () => {
           {events.map((event) => (
             <EventCard
               key={event.id}
+              id={event.id}
               title={event.title}
               description={event.description || "No description provided."}
               date={formatEventDate(event.date)}
@@ -120,9 +174,25 @@ const Events = () => {
               maxAttendees={event.max_participants || undefined}
               attendees={0}
               isPast={isEventPast(event.date)}
+              isJoined={joinedEventIds.has(event.id)}
+              isAuthenticated={!!user}
+              onJoinClick={() => handleJoinClick(event)}
             />
           ))}
         </div>
+      )}
+
+      {/* Join Event Modal */}
+      {selectedEvent && user && (
+        <JoinEventModal
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          eventId={selectedEvent.id}
+          eventTitle={selectedEvent.title}
+          userEmail={user.email || ""}
+          userId={user.id}
+          onSuccess={handleJoinSuccess}
+        />
       )}
     </div>
   );
