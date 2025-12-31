@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import PostCard from "@/components/cards/PostCard";
 import EventCard from "@/components/cards/EventCard";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const stats = [
   { label: "Total Members", value: "1,234", icon: Users, change: "+12%" },
@@ -50,12 +53,35 @@ const upcomingEvents = [
 ];
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  const [profileName, setProfileName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (data?.name) {
+        setProfileName(data.name);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const displayName = profileName || user?.email?.split("@")[0] || "there";
+
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Welcome back, John! 👋</h1>
+          <h1 className="text-3xl font-bold">Welcome back, {displayName}! 👋</h1>
           <p className="text-muted-foreground">Here's what's happening in your community today.</p>
         </div>
         <div className="flex gap-3">
