@@ -6,9 +6,90 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Settings = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+
+      setLoading(true);
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (data) {
+        setName(data.name || "");
+        setEmail(data.email || user.email || "");
+        setBio(data.bio || "");
+        setAvatarUrl(data.avatar_url || "");
+      } else {
+        setEmail(user.email || "");
+      }
+
+      setLoading(false);
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    setSaving(true);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        name,
+        bio,
+        avatar_url: avatarUrl || null,
+      })
+      .eq("id", user.id);
+
+    setSaving(false);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save profile changes.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Profile updated successfully.",
+      });
+    }
+  };
+
+  const initials = name ? name.slice(0, 2).toUpperCase() : email?.slice(0, 2).toUpperCase() || "U";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
@@ -26,49 +107,59 @@ const Settings = () => {
           {/* Avatar */}
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face" />
-              <AvatarFallback>JD</AvatarFallback>
+              <AvatarImage src={avatarUrl || undefined} />
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
-            <div>
-              <Button variant="outline" size="sm">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Photo
-              </Button>
-              <p className="text-xs text-muted-foreground mt-1">JPG, PNG or GIF. Max 2MB.</p>
+            <div className="flex-1">
+              <Label htmlFor="avatar_url">Avatar URL</Label>
+              <Input
+                id="avatar_url"
+                placeholder="https://example.com/avatar.jpg"
+                value={avatarUrl}
+                onChange={(e) => setAvatarUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Enter a URL to your profile image</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" defaultValue="John Doe" />
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your full name"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input id="username" defaultValue="johndoe" />
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" defaultValue="john@example.com" />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="bio">Bio</Label>
             <Textarea
               id="bio"
-              defaultValue="Community builder and software engineer."
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Tell us about yourself..."
               rows={3}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input id="location" defaultValue="San Francisco, CA" />
-          </div>
-
-          <Button>Save Changes</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
         </CardContent>
       </Card>
 

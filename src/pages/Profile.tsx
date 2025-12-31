@@ -2,33 +2,104 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
-import { Edit, Calendar, FileText, Mail, MapPin } from "lucide-react";
+import { Edit, Calendar, FileText, Mail, MapPin, Loader2 } from "lucide-react";
 import PostCard from "@/components/cards/PostCard";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-const userPosts = [
-  {
-    id: "1",
-    title: "My Journey Building Community Tools",
-    description: "Sharing my experience over the past year building tools for community managers.",
-    author: { name: "John Doe", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face" },
-    timestamp: "1 week ago",
-    likes: 34,
-    comments: 8,
-  },
-  {
-    id: "2",
-    title: "Tips for Effective Community Moderation",
-    description: "Key lessons learned from moderating a community of 10,000+ members.",
-    author: { name: "John Doe", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face" },
-    timestamp: "2 weeks ago",
-    likes: 56,
-    comments: 15,
-  },
-];
+interface Profile {
+  name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  role: string | null;
+  created_at: string;
+}
+
+interface Post {
+  id: string;
+  title: string;
+  content: string | null;
+  created_at: string;
+}
 
 const Profile = () => {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ posts: 0, events: 0 });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+
+      setLoading(true);
+
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileData) {
+        setProfile(profileData);
+      }
+
+      // Fetch recent posts by this user
+      const { data: postsData } = await supabase
+        .from("posts")
+        .select("id, title, content, created_at")
+        .eq("author_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (postsData) {
+        setPosts(postsData);
+      }
+
+      // Fetch stats
+      const { count: postsCount } = await supabase
+        .from("posts")
+        .select("*", { count: "exact", head: true })
+        .eq("author_id", user.id);
+
+      const { count: eventsCount } = await supabase
+        .from("events")
+        .select("*", { count: "exact", head: true })
+        .eq("organizer_id", user.id);
+
+      setStats({
+        posts: postsCount || 0,
+        events: eventsCount || 0,
+      });
+
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [user]);
+
+  const displayName = profile?.name || user?.email?.split("@")[0] || "User";
+  const initials = displayName.slice(0, 2).toUpperCase();
+  const joinedDate = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : "";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Profile Header Card */}
@@ -36,18 +107,20 @@ const Profile = () => {
         <CardContent className="p-8">
           <div className="flex flex-col md:flex-row gap-6">
             <Avatar className="h-24 w-24 ring-4 ring-primary/20">
-              <AvatarImage src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face" />
-              <AvatarFallback className="text-2xl">JD</AvatarFallback>
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
             </Avatar>
-            
+
             <div className="flex-1 space-y-4">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-bold">John Doe</h1>
-                    <Badge>Admin</Badge>
+                    <h1 className="text-2xl font-bold">{displayName}</h1>
+                    <Badge>{profile?.role || "Member"}</Badge>
                   </div>
-                  <p className="text-muted-foreground">@johndoe</p>
+                  <p className="text-muted-foreground">
+                    @{profile?.name?.toLowerCase().replace(/\s+/g, "") || user?.email?.split("@")[0]}
+                  </p>
                 </div>
                 <Button variant="outline" asChild>
                   <Link to="/dashboard/settings">
@@ -56,23 +129,21 @@ const Profile = () => {
                   </Link>
                 </Button>
               </div>
-              
-              <p className="text-muted-foreground max-w-2xl">
-                Community builder and software engineer. Passionate about creating inclusive online spaces and helping communities thrive. Currently leading community initiatives at TechCorp.
-              </p>
-              
+
+              {profile?.bio && (
+                <p className="text-muted-foreground max-w-2xl">{profile.bio}</p>
+              )}
+
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>San Francisco, CA</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>Joined January 2023</span>
-                </div>
+                {joinedDate && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>Joined {joinedDate}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1">
                   <Mail className="h-4 w-4" />
-                  <span>john@example.com</span>
+                  <span>{profile?.email || user?.email}</span>
                 </div>
               </div>
             </div>
@@ -84,25 +155,25 @@ const Profile = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">24</p>
+            <p className="text-2xl font-bold">{stats.posts}</p>
             <p className="text-sm text-muted-foreground">Posts</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">12</p>
+            <p className="text-2xl font-bold">{stats.events}</p>
             <p className="text-sm text-muted-foreground">Events Hosted</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">348</p>
+            <p className="text-2xl font-bold">-</p>
             <p className="text-sm text-muted-foreground">Likes Received</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">89</p>
+            <p className="text-2xl font-bold">-</p>
             <p className="text-sm text-muted-foreground">Comments</p>
           </CardContent>
         </Card>
@@ -117,11 +188,29 @@ const Profile = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {userPosts.map((post) => (
-              <PostCard key={post.id} {...post} />
-            ))}
-          </div>
+          {posts.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No posts yet. <Link to="/dashboard/posts/new" className="text-primary hover:underline">Create your first post!</Link>
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  id={post.id}
+                  title={post.title}
+                  description={post.content || ""}
+                  author={{
+                    name: displayName,
+                    avatar: profile?.avatar_url || undefined,
+                  }}
+                  timestamp={new Date(post.created_at).toLocaleDateString()}
+                  likes={0}
+                  comments={0}
+                />
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
