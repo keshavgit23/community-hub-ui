@@ -3,6 +3,7 @@ import { Calendar, MapPin, Users, Check } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 
 interface EventCardProps {
   id?: string;
@@ -20,6 +21,7 @@ interface EventCardProps {
 
 const EventCard = forwardRef<HTMLDivElement, EventCardProps>(
   ({ 
+    id,
     title, 
     date, 
     location, 
@@ -57,9 +59,17 @@ const EventCard = forwardRef<HTMLDivElement, EventCardProps>(
               </div>
             )}
           </div>
-          <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors">
-            {title}
-          </h3>
+          {id ? (
+            <Link to={`/dashboard/events/${id}`}>
+              <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors cursor-pointer">
+                {title}
+              </h3>
+            </Link>
+          ) : (
+            <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors">
+              {title}
+            </h3>
+          )}
           <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
             {description}
           </p>
@@ -74,9 +84,14 @@ const EventCard = forwardRef<HTMLDivElement, EventCardProps>(
             </div>
           </div>
         </CardContent>
-        <CardFooter className="px-6 pb-6">
+        <CardFooter className="px-6 pb-6 flex gap-2">
+          {id && (
+            <Button variant="outline" className="flex-1" asChild>
+              <Link to={`/dashboard/events/${id}`}>View Details</Link>
+            </Button>
+          )}
           <Button 
-            className="w-full" 
+            className="flex-1" 
             disabled={isPast || isJoined}
             variant={isJoined ? "secondary" : "default"}
             onClick={onJoinClick}

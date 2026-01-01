@@ -12,7 +12,9 @@ import Posts from "./pages/Posts";
 import CreatePost from "./pages/CreatePost";
 import Events from "./pages/Events";
 import CreateEvent from "./pages/CreateEvent";
+import EventDetail from "./pages/EventDetail";
 import Members from "./pages/Members";
+import MemberProfile from "./pages/MemberProfile";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -40,7 +42,9 @@ const App = () => (
               <Route path="posts/create" element={<CreatePost />} />
               <Route path="events" element={<Events />} />
               <Route path="events/create" element={<CreateEvent />} />
+              <Route path="events/:id" element={<EventDetail />} />
               <Route path="members" element={<Members />} />
+              <Route path="members/:id" element={<MemberProfile />} />
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
             </Route>
